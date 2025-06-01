@@ -1,30 +1,52 @@
 const Foto = require('../models/foto.model');
+const logger = require('../utils/logger');
 
-exports.uploadFoto = async (req, res) => {
+exports.criarFoto = async ({ titulo, caminho, album }) => {
   try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'Nenhuma imagem foi selecionada. Por favor, envie uma foto.' });
-    }
-
-    const foto = new Foto({
-      titulo: req.body.titulo,
-      caminho: req.file.path,
-      album: req.body.album
-    });
-    await foto.save();
-    res.status(201).json(foto);
+    const foto = new Foto({ titulo, caminho, album });
+    return await foto.save();
   } catch (err) {
-    require('../utils/logger').logError(err);
-    res.status(err.status || 500).json({ error: err.message || 'Erro ao salvar foto.' });
+    logger.logError(err);
+    throw err;
   }
 };
 
-exports.listarFotos = async (req, res) => {
+exports.listarFotos = async () => {
   try {
-    const fotos = await Foto.find().populate('album');
-    res.json(fotos);
+    return await Foto.find().populate('album');
   } catch (err) {
-    require('../utils/logger').logError(err);
-    res.status(500).json({ error: err.message || 'Erro ao listar fotos.' });
+    logger.logError(err);
+    throw err;
+  }
+};
+
+exports.buscarFotoPorId = async (id) => {
+  try {
+    return await Foto.findById(id).populate('album');
+  } catch (err) {
+    logger.logError(err);
+    throw err;
+  }
+};
+
+exports.atualizarFoto = async (id, body) => {
+  try {
+    return await Foto.findByIdAndUpdate(
+      id,
+      { $set: body },
+      { new: true, runValidators: true }
+    );
+  } catch (err) {
+    logger.logError(err);
+    throw err;
+  }
+};
+
+exports.deletarFoto = async (id) => {
+  try {
+    return await Foto.findByIdAndDelete(id);
+  } catch (err) {
+    logger.logError(err);
+    throw err;
   }
 };

@@ -1,5 +1,5 @@
 const url = require('url');
-const albumController = require('../controllers/album.controller');
+const usuarioController = require('../controllers/usuario.controller');
 const logger = require('../utils/logger');
 const {
   getRequestBody,
@@ -7,53 +7,57 @@ const {
   sendErrorResponse,
 } = require('../utils/http');
 
-module.exports = async function albumRoutes(req, res) {
+module.exports = async function usuarioRoutes(req, res) {
   const parsedUrl = url.parse(req.url, true);
   const pathname = parsedUrl.pathname;
   const method = req.method.toUpperCase();
 
-  if (pathname === '/api/albuns' && method === 'POST') {
+  if (pathname === '/api/usuarios' && method === 'POST') {
     try {
       const body = await getRequestBody(req);
-      const novo = await albumController.criarAlbum(body);
+      if (!body.nome || !body.email) {
+        sendErrorResponse(res, 400, 'Campos obrigatórios: nome e email.');
+        return true;
+      }
+      const novo = await usuarioController.criarUsuario(body);
       sendJsonResponse(res, 201, novo);
       return true;
     } catch (err) {
       const status = err.name === 'ValidationError' ? 400 : 500;
       logger.logError(err);
-      sendErrorResponse(res, status, err.message || 'Erro ao criar álbum.');
+      sendErrorResponse(res, status, err.message || 'Erro ao criar usuário.');
       return true;
     }
   }
 
-  if (pathname === '/api/albuns' && method === 'GET') {
+  if (pathname === '/api/usuarios' && method === 'GET') {
     try {
-      const lista = await albumController.listarAlbuns();
+      const lista = await usuarioController.listarUsuarios();
       sendJsonResponse(res, 200, lista);
       return true;
     } catch (err) {
       logger.logError(err);
-      sendErrorResponse(res, 500, err.message || 'Erro ao listar álbuns.');
+      sendErrorResponse(res, 500, err.message || 'Erro ao listar usuários.');
       return true;
     }
   }
 
-  const idMatch = pathname.match(/^\/api\/albuns\/([a-fA-F0-9]{24})$/);
+  const idMatch = pathname.match(/^\/api\/usuarios\/([a-fA-F0-9]{24})$/);
   if (idMatch) {
     const id = idMatch[1];
 
     if (method === 'GET') {
       try {
-        const item = await albumController.buscarAlbumPorId(id);
+        const item = await usuarioController.buscarUsuarioPorId(id);
         if (!item) {
-          sendErrorResponse(res, 404, 'Álbum não encontrado.');
+          sendErrorResponse(res, 404, 'Usuário não encontrado.');
         } else {
           sendJsonResponse(res, 200, item);
         }
         return true;
       } catch (err) {
         logger.logError(err);
-        sendErrorResponse(res, 500, err.message || 'Erro ao buscar álbum.');
+        sendErrorResponse(res, 500, err.message || 'Erro ao buscar usuário.');
         return true;
       }
     }
@@ -61,9 +65,13 @@ module.exports = async function albumRoutes(req, res) {
     if (method === 'PUT') {
       try {
         const body = await getRequestBody(req);
-        const atualizado = await albumController.atualizarAlbum(id, body);
+        const atualizado = await usuarioController.atualizarUsuario(id, body);
         if (!atualizado) {
-          sendErrorResponse(res, 404, 'Álbum não encontrado para atualização.');
+          sendErrorResponse(
+            res,
+            404,
+            'Usuário não encontrado para atualização.'
+          );
         } else {
           sendJsonResponse(res, 200, atualizado);
         }
@@ -74,7 +82,7 @@ module.exports = async function albumRoutes(req, res) {
         sendErrorResponse(
           res,
           status,
-          err.message || 'Erro ao atualizar álbum.'
+          err.message || 'Erro ao atualizar usuário.'
         );
         return true;
       }
@@ -82,18 +90,18 @@ module.exports = async function albumRoutes(req, res) {
 
     if (method === 'DELETE') {
       try {
-        const deletado = await albumController.deletarAlbum(id);
+        const deletado = await usuarioController.deletarUsuario(id);
         if (!deletado) {
-          sendErrorResponse(res, 404, 'Álbum não encontrado para exclusão.');
+          sendErrorResponse(res, 404, 'Usuário não encontrado para exclusão.');
         } else {
           sendJsonResponse(res, 200, {
-            message: 'Álbum removido com sucesso.',
+            message: 'Usuário removido com sucesso.',
           });
         }
         return true;
       } catch (err) {
         logger.logError(err);
-        sendErrorResponse(res, 500, err.message || 'Erro ao deletar álbum.');
+        sendErrorResponse(res, 500, err.message || 'Erro ao deletar usuário.');
         return true;
       }
     }

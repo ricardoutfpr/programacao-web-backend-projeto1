@@ -1,22 +1,52 @@
 const Album = require('../models/album.model');
+const logger = require('../utils/logger');
 
-exports.criarAlbum = async (req, res) => {
+exports.criarAlbum = async (body) => {
   try {
-    const album = new Album(req.body);
-    await album.save();
-    res.status(201).json(album);
+    const album = new Album(body);
+    return await album.save();
   } catch (err) {
-    require('../utils/logger').logError(err);
-    res.status(500).json({ error: err.message | 'Erro ao criar álbum.' });
+    logger.logError(err);
+    throw err;
   }
 };
 
-exports.listarAlbuns = async (req, res) => {
+exports.listarAlbuns = async () => {
   try {
-    const albuns = await Album.find();
-    res.json(albuns);
+    return await Album.find();
   } catch (err) {
-    require('../utils/logger').logError(err);
-    res.status(500).json({ error: err.message | 'Erro ao buscar álbuns.' });
+    logger.logError(err);
+    throw err;
+  }
+};
+
+exports.buscarAlbumPorId = async (id) => {
+  try {
+    return await Album.findById(id);
+  } catch (err) {
+    logger.logError(err);
+    throw err;
+  }
+};
+
+exports.atualizarAlbum = async (id, body) => {
+  try {
+    return await Album.findByIdAndUpdate(
+      id,
+      { $set: body },
+      { new: true, runValidators: true }
+    );
+  } catch (err) {
+    logger.logError(err);
+    throw err;
+  }
+};
+
+exports.deletarAlbum = async (id) => {
+  try {
+    return await Album.findByIdAndDelete(id);
+  } catch (err) {
+    logger.logError(err);
+    throw err;
   }
 };
