@@ -1,52 +1,70 @@
-const Album = require('../models/album.model');
-const logger = require('../utils/logger');
+const Album = require("../models/album.model");
+const logger = require("../utils/logger");
 
-exports.criarAlbum = async (body) => {
+exports.createAlbum = async (req, res, next) => {
   try {
-    const album = new Album(body);
-    return await album.save();
+    const { nome, descricao } = req.body;
+    const album = await new Album({
+      nome,
+      descricao,
+      usuario: req.session.userId,
+    }).save();
+    res.status(201).json(album);
   } catch (err) {
     logger.logError(err);
-    throw err;
+    next(err);
   }
 };
 
-exports.listarAlbuns = async () => {
+exports.listAlbums = async (req, res, next) => {
   try {
-    return await Album.find();
+    const albuns = await Album.find({ usuario: req.session.userId });
+    res.json(albuns);
   } catch (err) {
     logger.logError(err);
-    throw err;
+    next(err);
   }
 };
 
-exports.buscarAlbumPorId = async (id) => {
+exports.getAlbum = async (req, res, next) => {
   try {
-    return await Album.findById(id);
+    const album = await Album.findOne({
+      _id: req.params.id,
+      usuario: req.session.userId,
+    });
+    if (!album) throw { status: 404, message: "Álbum não encontrado." };
+    res.json(album);
   } catch (err) {
     logger.logError(err);
-    throw err;
+    next(err);
   }
 };
 
-exports.atualizarAlbum = async (id, body) => {
+exports.updateAlbum = async (req, res, next) => {
   try {
-    return await Album.findByIdAndUpdate(
-      id,
-      { $set: body },
+    const updated = await Album.findOneAndUpdate(
+      { _id: req.params.id, usuario: req.session.userId },
+      req.body,
       { new: true, runValidators: true }
     );
+    if (!updated) throw { status: 404, message: "Álbum não encontrado." };
+    res.json(updated);
   } catch (err) {
     logger.logError(err);
-    throw err;
+    next(err);
   }
 };
 
-exports.deletarAlbum = async (id) => {
+exports.deleteAlbum = async (req, res, next) => {
   try {
-    return await Album.findByIdAndDelete(id);
+    const removed = await Album.findOneAndDelete({
+      _id: req.params.id,
+      usuario: req.session.userId,
+    });
+    if (!removed) throw { status: 404, message: "Álbum não encontrado." };
+    res.json({ message: "Álbum removido." });
   } catch (err) {
     logger.logError(err);
-    throw err;
+    next(err);
   }
 };

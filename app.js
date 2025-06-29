@@ -1,66 +1,50 @@
-require('dotenv').config();
-const http = require('http');
-const url = require('url');
-const fs = require('fs');
-const path = require('path');
-const mongoose = require('mongoose');
-const { sendErrorResponse } = require('./utils/http');
+require("dotenv").config();
+const express = require("express");
+const session = require("express-session");
+const mongoose = require("mongoose");
+const MongoStore = require("connect-mongo");
 
-const albumRoutes = require('./routes/album.routes');
-const fotoRoutes = require('./routes/foto.routes');
-const usuarioRoutes = require('./routes/usuario.routes');
+const usuarioRoutes = require("./routes/usuario.routes");
+const albumRoutes = require("./routes/album.routes");
+const fotoRoutes = require("./routes/foto.routes");
 
+const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Conexão com o MongoDB
 mongoose
-  .connect(process.env.MONGO_URI, {
+  .connect(process.env.MONGODB_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   })
-  .then(() => console.log('Conectado ao MongoDB'))
+  .then(() => console.log("MongoDB conectado"))
   .catch((err) => {
-    console.error('Erro de conexão:', err);
+    console.error("Erro ao conectar no MongoDB:", err);
     process.exit(1);
   });
 
-function serveStatic(req, res) {
-  const parsedUrl = url.parse(req.url, true);
-  const pathname = parsedUrl.pathname;
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    store: MongoStore.create({ mongoUrl: process.env.MONGODB_URI }),
+    cookie: { maxAge: 1000 * 60 * 60 * 24 },
+  })
+);
 
-  if (pathname.startsWith('/uploads/')) {
-    const filePath = path.join(__dirname, pathname);
-    fs.access(filePath, fs.constants.F_OK, (err) => {
-      if (err) {
-        res.writeHead(404);
-        return res.end('Arquivo não encontrado.');
-      }
-      const stream = fs.createReadStream(filePath);
-      res.writeHead(200);
-      stream.pipe(res);
-    });
-    return true;
-  }
-  return false;
-}
+app.use("/api/usuarios", usuarioRoutes);
+app.use("/api/albuns", albumRoutes);
+app.use("/api/fotos", fotoRoutes);
 
-// Criação do servidor HTTP
-const server = http.createServer(async (req, res) => {
-  if (serveStatic(req, res)) {
-    return;
-  }
-
-  try {
-    if (await albumRoutes(req, res)) return;
-    if (await fotoRoutes(req, res)) return;
-    if (await usuarioRoutes(req, res)) return;
-  } catch (err) {
-    return sendErrorResponse(res, 500, 'Erro no roteamento.');
-  }
-
-  return sendErrorResponse(res, 404, 'Rota não encontrada.');
+app.use((err, req, res, next) => {
+  console.error(err);
+  const status = err.status || 500;
+  res.status(status).json({ error: err.message || "Erro interno na aplicação." });
 });
 
-server.listen(PORT, () => {
-  console.log(`Servidor rodando na porta ${PORT}`);
+app.listen(PORT, () => {
+  console.log(`API rodando em http://localhost:${PORT}/api`);
 });

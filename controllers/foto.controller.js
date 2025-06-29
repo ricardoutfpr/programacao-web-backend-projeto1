@@ -1,52 +1,62 @@
-const Foto = require('../models/foto.model');
-const logger = require('../utils/logger');
+const Foto = require("../models/foto.model");
+const logger = require("../utils/logger");
 
-exports.criarFoto = async ({ titulo, caminho, album }) => {
+exports.uploadFoto = async (req, res, next) => {
   try {
-    const foto = new Foto({ titulo, caminho, album });
-    return await foto.save();
+    const { titulo, album } = req.body;
+    if (!req.file) throw { status: 400, message: "Arquivo não enviado." };
+    const caminho = req.file.path;
+    const foto = await new Foto({ titulo, caminho, album }).save();
+    res.status(201).json(foto);
   } catch (err) {
     logger.logError(err);
-    throw err;
+    next(err);
   }
 };
 
-exports.listarFotos = async () => {
+exports.listFotos = async (req, res, next) => {
   try {
-    return await Foto.find().populate('album');
+    const fotos = await Foto.find({ album: req.query.album }).populate("album");
+    res.json(fotos);
   } catch (err) {
     logger.logError(err);
-    throw err;
+    next(err);
   }
 };
 
-exports.buscarFotoPorId = async (id) => {
+exports.getFoto = async (req, res, next) => {
   try {
-    return await Foto.findById(id).populate('album');
+    const foto = await Foto.findById(req.params.id).populate("album");
+    if (!foto) throw { status: 404, message: "Foto não encontrada." };
+    res.json(foto);
   } catch (err) {
     logger.logError(err);
-    throw err;
+    next(err);
   }
 };
 
-exports.atualizarFoto = async (id, body) => {
+exports.updateFoto = async (req, res, next) => {
   try {
-    return await Foto.findByIdAndUpdate(
-      id,
-      { $set: body },
-      { new: true, runValidators: true }
-    );
+    const updated = await Foto.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+      runValidators: true,
+    });
+    if (!updated) throw { status: 404, message: "Foto não encontrada." };
+    res.json(updated);
   } catch (err) {
     logger.logError(err);
-    throw err;
+    next(err);
   }
 };
 
-exports.deletarFoto = async (id) => {
+exports.deleteFoto = async (req, res, next) => {
   try {
-    return await Foto.findByIdAndDelete(id);
+    const foto = await Foto.findById(req.params.id);
+    if (!foto) throw { status: 404, message: "Foto não encontrada." };
+    await foto.remove();
+    res.json({ message: "Foto removida." });
   } catch (err) {
     logger.logError(err);
-    throw err;
+    next(err);
   }
 };
